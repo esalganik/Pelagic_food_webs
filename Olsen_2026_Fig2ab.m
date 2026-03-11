@@ -191,18 +191,19 @@ ylabel(cb,'freeboard (m)','FontSize',9);
 title(t, sprintf('\\theta=%.2f°   dx=%.1f m   dy=%.1f m   r=%.4f', ...
     theta_opt, dx_opt, dy_opt, r_final),'FontSize',10);
 
-clearvars -except z_rov x_rov y_rov x_als y_als z_als xa_f ya_f Zrov_als
+clearvars -except z_rov x_rov y_rov x_als y_als z_als xa_f ya_f Zrov_als Zals_crop
 
 %% Final plot 2ab
 close all
 figure
 tile = tiledlayout(1,2); tile.TileSpacing = 'compact'; tile.Padding = 'none';
-c{1} = [0.0000 0.4470 0.7410]; c{2} = [0.8500 0.3250 0.0980]; c{3} = [0.9290 0.6940 0.1250]; % colors
+c{1} = [0.0000 0.4470 0.7410]; c{2} = [0.8500 0.3250 0.0980]; c{3} = [0.9290 0.6940 0.1250]; c{4} = [0.4940 0.1840 0.5560];	c{5} = [0.4660 0.6740 0.1880]; c{6} = [0.3010 0.7450 0.9330]; c{7} = [0.6350 0.0780 0.1840]; % colors
 fsz = 10; fsz_s = 9;
 nexttile
 dx = 304; dy = 431;
 range = -0.05:0.05:2.5; % Graph accuracy
-contourf(x_als+dx,y_als+dy,z_als,range,'LabelSpacing',10,'edgecolor','none'); hold on;
+% contourf(x_als+dx,y_als+dy,z_als,range,'LabelSpacing',10,'edgecolor','none'); hold on;
+contourf(xa_f+dx,ya_f+dy,Zals_crop,range,'LabelSpacing',10,'edgecolor','none'); hold on;
 p = plot(36.5,34.5,'o','color','k'); p.MarkerSize = 4.0; set(p,'markerfacecolor',c{3}); % Ridge coring 10 Jan
 p = plot(2.5,42,'o','color','k'); p.MarkerSize = 4.0; set(p,'markerfacecolor',c{5}); % FYI coring 3 Jan
 p = plot(44.5,63.5,'o','color','k'); p.MarkerSize = 4.0; set(p,'markerfacecolor',c{5}); % FYI coring 3 Jan
@@ -253,5 +254,77 @@ xlim([0 70]); xticks(0:10:70); ylim([0 80]);
 annotation('textbox',[0 .51 0.02 .51],'String','(a)','EdgeColor','none','HorizontalAlignment','center','FontSize',fsz);
 annotation('textbox',[0.35 .51 0.35 .51],'String','(b)','EdgeColor','none','HorizontalAlignment','center','FontSize',fsz);
 set(gcf,'Units','inches','Position',[3 4 6.2 2.2])
+clearvars -except x_als y_als z_als xa_f ya_f Zals_crop Zrov_als
 
+%% NetCDF export
+ncFile = 'colocated_freeboard_draft_20200107.nc';
 
+if isfile(ncFile)
+    delete(ncFile)
+end
+
+Nx = length(xa_f);   % 301
+Ny = length(ya_f);   % 344
+
+% Sanity checks
+assert(isequal(size(Zals_crop), [Ny, Nx]), ...
+    'Zals_crop must have size [length(ya_f), length(xa_f)]')
+assert(isequal(size(Zrov_als), [Ny, Nx]), ...
+    'Zrov_als must have size [length(ya_f), length(xa_f)]')
+
+% Create coordinate variables
+nccreate(ncFile, 'xa_f', ...
+    'Dimensions', {'x', Nx}, ...
+    'Datatype', 'double');
+
+nccreate(ncFile, 'ya_f', ...
+    'Dimensions', {'y', Ny}, ...
+    'Datatype', 'double');
+
+% Create 2D data variables
+nccreate(ncFile, 'Zals_crop', ...
+    'Dimensions', {'y', Ny, 'x', Nx}, ...
+    'Datatype', 'double');
+
+nccreate(ncFile, 'Zrov_als', ...
+    'Dimensions', {'y', Ny, 'x', Nx}, ...
+    'Datatype', 'double');
+
+% Write coordinate data
+ncwrite(ncFile, 'xa_f', xa_f);
+ncwrite(ncFile, 'ya_f', ya_f);
+
+% Write 2D fields exactly as matrices
+ncwrite(ncFile, 'Zals_crop', Zals_crop);
+ncwrite(ncFile, 'Zrov_als', Zrov_als);
+
+% Coordinate variable attributes
+ncwriteatt(ncFile, 'xa_f', 'long_name', 'horizontal coordinate x');
+ncwriteatt(ncFile, 'xa_f', 'units', 'm');
+
+ncwriteatt(ncFile, 'ya_f', 'long_name', 'vertical coordinate y');
+ncwriteatt(ncFile, 'ya_f', 'units', 'm');
+
+% Data variable attributes
+ncwriteatt(ncFile, 'Zals_crop', 'long_name', 'snow freeboard');
+ncwriteatt(ncFile, 'Zals_crop', 'units', 'm');
+ncwriteatt(ncFile, 'Zals_crop', 'coordinates', 'xa_f ya_f');
+
+ncwriteatt(ncFile, 'Zrov_als', 'long_name', 'ice draft');
+ncwriteatt(ncFile, 'Zrov_als', 'units', 'm');
+ncwriteatt(ncFile, 'Zrov_als', 'coordinates', 'xa_f ya_f');
+
+% Global attributes
+ncwriteatt(ncFile,"/","title","Colocated snow freeboard and ice draft for 7 Jan 2020 for MOSAiC Expedition");
+ncwriteatt(ncFile,"/","Conventions","CF-1.7");
+ncwriteatt(ncFile,"/","contributor_name", ...
+    "Evgenii Salganik; Philipp Anhaus; Nils Hutter; Stefan Hendricks; Arttu Jutila; Gerit Birnbaum; Luisa von Albedyll; Robert Ricker; Christian Haas; Christian Katlein; Ilkka Matero; Marcel Nicolaus; Stefanie Arndt; Daniela Krampe; Benjamin Allen Lange; Julia Regnery; Jan Rohde; Martin Schiller; Daniela Ransby");
+ncwriteatt(ncFile,"/","contributor_email","evgenii.salganik@awi.de");
+ncwriteatt(ncFile,"/","institution","Alfred Wegener Institute for Polar and Marine Research");
+ncwriteatt(ncFile,"/","creator_name","Evgenii Salganik");
+ncwriteatt(ncFile,"/","creator_email","evgenii.salganik@awi.de");
+ncwriteatt(ncFile,"/","project","Arctic PASSION");
+ncwriteatt(ncFile,"/","summary","Colocated snow freeboard and ice draft gridded data for 7 Jan 2020 collected during the MOSAiC Expedition");
+ncwriteatt(ncFile,"/","license","CC-0");
+
+ncdisp(ncFile)
