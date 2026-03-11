@@ -11,4 +11,5 @@ Repository contents:
 - Olsen_2026_Fig2ab.m - script to process raw data and reproduce Fig2ab.png
 - PS122_2_19_27_20200107_ROV_MULTIBEAM_v1_new.tab - multibeam sonar dataset from Anhaus et al., 2024
 - README.md - repository description
+- broc.mat - colormap broc from Crameri et al., 2020
 - colocated_freeboard_draft_20200107.nc - processed and exported data to reproduce the figure Fig2ab.png
