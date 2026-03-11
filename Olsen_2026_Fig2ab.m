@@ -1,4 +1,4 @@
-%% Import of ALS and ROV data
+%% Import of ALS snow freeboard and ROV ice draft data
 clear; clc;
 % ALS freeboard data from Hutter et al. (2023) doi:10.1594/PANGAEA.950896
 project = 'awi-mosaic-l4-als-vq580-stere-0p50m-20200107T092304-20200107T105236-fv2p0.nc';
@@ -28,17 +28,16 @@ z_rov = ZZ_rov; x_rov = xv_rov; y_rov = yv_rov; z_rov = rot90(z_rov,2);
 clearvars -except z_rov x_rov y_rov x_als y_als z_als
 
 %% ALS / ROV colocation  —  rotation + translation
-close all
 % USER INPUTS
-theta_init   = -35; % initial angle betwee ALD and ROV grid orientation
-search_range =  20; % angle range
-max_shift    =   5; % shift range
+theta_init   = -35; % initial angle betwee ALS and ROV grid orientation
+search_range =  20; % angle search range
+max_shift    =   5; % shift search range
 
 anchor_rov = [129,  -132]; % anchor point at ROV coordinates
 anchor_als = [-266, -396]; % anchor point at ALS coordinates
 
-x_rov_roi  = [40,  180]; % crop
-y_rov_roi  = [-190, -70]; % crop
+x_rov_roi  = [40,  180];  % crop of the full ROV data
+y_rov_roi  = [-190, -70]; % crop of the full ROV data
 
 % CROP ROV TO ROI ONCE
 xm = x_rov >= x_rov_roi(1) & x_rov <= x_rov_roi(2);
@@ -144,9 +143,7 @@ ya_f = y_als(y_als >= min(Yt(:)) & y_als <= max(Yt(:)));
 F = scatteredInterpolant(Xt(:), Yt(:), Zroi_vec, 'linear', 'none');
 Zrov_als = F(Xa_f, Ya_f);
 
-% =========================================================================
 % PLOTS
-% =========================================================================
 load('broc.mat');
 range = -0.05:0.05:2.5;
 
@@ -193,7 +190,7 @@ title(t, sprintf('\\theta=%.2f°   dx=%.1f m   dy=%.1f m   r=%.4f', ...
 
 clearvars -except z_rov x_rov y_rov x_als y_als z_als xa_f ya_f Zrov_als Zals_crop
 
-%% Final plot 2ab
+%% Final plot: Figure 2ab
 close all
 figure
 tile = tiledlayout(1,2); tile.TileSpacing = 'compact'; tile.Padding = 'none';
@@ -202,7 +199,6 @@ fsz = 10; fsz_s = 9;
 nexttile
 dx = 304; dy = 431;
 range = -0.05:0.05:2.5; % Graph accuracy
-% contourf(x_als+dx,y_als+dy,z_als,range,'LabelSpacing',10,'edgecolor','none'); hold on;
 contourf(xa_f+dx,ya_f+dy,Zals_crop,range,'LabelSpacing',10,'edgecolor','none'); hold on;
 p = plot(36.5,34.5,'o','color','k'); p.MarkerSize = 4.0; set(p,'markerfacecolor',c{3}); % Ridge coring 10 Jan
 p = plot(2.5,42,'o','color','k'); p.MarkerSize = 4.0; set(p,'markerfacecolor',c{5}); % FYI coring 3 Jan
